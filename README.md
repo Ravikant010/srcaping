@@ -14,6 +14,8 @@ The **Myntra Site Crawler** is a Python-based web scraping project developed to 
   - Product prices
   - Ratings
   - Other relevant product details
+  - comments
+  - more
 - **Data Storage**: The scraped data is stored in structured JSON files, with each file named according to its corresponding category for easy access and analysis.
 - **Scalability**: Built to handle large-scale e-commerce websites and scrape vast amounts of data efficiently.
   
