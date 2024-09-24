@@ -25,6 +25,7 @@ The **Myntra Site Crawler** is a Python-based web scraping project developed to 
 - **Selenium**: Used for automating browser actions, allowing the crawler to interact with dynamically loaded content.
 - **Beautiful Soup**: Used to parse HTML and extract meaningful data from the web pages.
 - **JSON**: The format used to store the scraped data.
+- **Scrapy**: to crawl websites and extract structured data from their pages
 
 ## How It Works
 
