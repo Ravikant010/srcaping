@@ -43,6 +43,8 @@ The **Myntra Site Crawler** is a Python-based web scraping project developed to 
    scrapy crawl myntra_navbar_spider
    you firefox will open and start doing things auto..
    ```
+[Watch Demo](https://drive.google.com/file/d/1rGHyiJg4oWTzR00dDqXrBJ9P2rtl6w3O/view)
+
    
    
    
