@@ -2,7 +2,6 @@ import scrapy
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
-
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
@@ -12,6 +11,7 @@ import time
 import json
 import os
 import re
+from selenium.webdriver.common.action_chains import ActionChains
 
 class MyntraNavbarSpider(scrapy.Spider):
     name = "myntra_navbar_spider"
@@ -20,48 +20,111 @@ class MyntraNavbarSpider(scrapy.Spider):
     base_url = "https://www.myntra.com"
     PAGE_LIMIT = 5
     nav_bar_links = []
+    next_page_links = []
     crawler_count = 0
     next_count = 0
+    next_page_count = 0
     driver = webdriver.Firefox()
     data = []
 
-    def link_opener(self, nav_link):
-        if self.crawler_count < 6:
-            self.driver.get(self.base_url + nav_link)
-            time.sleep(2)
-            self.crawl_pages()
-            self.next_count = 0
-            self.crawler_count += 1
-            return self.link_opener(self.nav_bar_links[self.crawler_count])
-        else:
-            self.driver.quit()
+    # def link_opener(self, nav_link):
+    #     if self.crawler_count < 6:
+    #         self.driver.get(self.base_url + nav_link)
+    #         # parse_page = BeautifulSoup(self.driver.page_source, "html.parser")
+    #         # wait = WebDriverWait(self.driver, 10)
+    #         # element = self.driver.find_element(By.CLASS_NAME, "pagination-next")
+    #         # element.click()
+    #         # # print(pagination_container, "pagination_container")
+    #         # # self.next_page_links = [tag.a['href'] for tag in pagination_container[:10]]
+    #         # # print("page_link",self.next_page_links)
+    #         time.sleep(2)
+    #         self.crawl_pages()
+    #         self.crawler_count += 1
+    #         return self.link_opener(self.nav_bar_links[self.crawler_count])
+    #     else:
+    #         self.driver.quit()
+    #         return 
 
-    def crawl_pages(self):
-        while self.next_count < 6 and self.crawler_count < self.PAGE_LIMIT:
-            time.sleep(2)
-            if self.next_count < 2:
-                self.parse_page(self.driver.page_source)
-                self.get_next_link(self.driver)
+    def link_opener(self):
+        # while self.crawler_count < 6 and self.crawler_count < len(self.nav_bar_links):
+            while self.crawler_count < 50: 
+                self.driver.get(self.base_url + self.nav_bar_links[self.crawler_count])
                 time.sleep(2)
-            self.next_count += 1
+                self.crawl_pages()
+                self.crawler_count += 1
+        
+    def crawl_pages(self):
+        original_url = self.driver.current_url
+        # while self.next_page_count < 6:
+            # time.sleep(2)
+        self.parse_page(self.driver.page_source)
+   
+            # self.driver.get(original_url)
+            # time.sleep(2)
+            # # Navigate to the next page
+            # element = self.driver.find_element(By.CLASS_NAME, "pagination-next")
+            # element.click()
+            # self.next_page_count += 1
+            # Navigate back to the original page
+
+
+        # if self.crawler_count < len(self.nav_bar_links):
+
+        # self.next_page_count = 0
+
+        
+    # def crawl_pages(self):
+    #     while self.next_page_count < 6:
+    #         element = self.driver.find_element(By.CLASS_NAME, "pagination-next")
+    #         time.sleep(2)
+    #         self.parse_page(self.driver.page_source)
+    #         element.click()
+    #         self.next_page_count += 1
+    #         # Perform any additional actions or parsing here if needed
+    #     self.json_dump(self.nav_bar_links[self.crawler_count])
+    #     self.next_page_count = 0
+
+    # def crawl_pages(self):
+    #     while self.next_page_count < 6:
+    #             time.sleep(2)
+    #             parse_page = BeautifulSoup(self.driver.page_source, "html.parser")
+    #             # pagination_container = parse_page.find_all('li', class_ = 'pagination-number')
+    #             # print(pagination_container, "pagination_container")
+    #             # self.next_count+=1
+    #             time.sleep(2)
+    #             # self.crawl_pages()
+    #             if self.next_page_count < 6:
+    #                 self.driver.get(self.next_page_links[self.next_page_count])
+    #                 self.parse_page(self.driver.page_source)
+    #                 self.next_page_count +=1
+    #                 return self.crawl_pages()
+    #             else:
+    #                 self.json_dump(self.nav_bar_links[self.crawler_count])
+    #                 self.next_page_count = 0
+              
+                
 
     def parse(self, response):
         self.nav_bar_links = response.xpath(
             "//nav[@class='desktop-navbar']//ul[@class='desktop-navBlock']/li/a/@href"
         ).extract()
-        self.link_opener(self.nav_bar_links[self.crawler_count])
+        self.link_opener()
 
     def parse_page(self, page_source):
         page_source = BeautifulSoup(page_source, "html.parser")
-        print(page_source.prettify())
+        # print(page_source.prettify())
         logging.debug("Processing page content...")
         product_base_container = page_source.find("ul", class_="results-base")
         product_base = product_base_container.find_all("li", class_="product-base")
         time.sleep(3)
-
         if product_base:
-            for pd in product_base:
+            for index,pd in enumerate(product_base[:len(product_base) // 2]):
                 _pd_base = pd_base()
+                # if index == len(product_base) - 1 and self.next_count < 6:
+                #     self.next_count += 1
+                #     self.driver.get(self.next_page_links[self.next_count])
+                #     time.sleep(2)
+                #     return self.parse_page(self.driver.page_source)
                 try:
                     _pd_base['brand'] = pd.find('h3', class_='product-brand').get_text()
                 except AttributeError:
@@ -91,35 +154,98 @@ class MyntraNavbarSpider(scrapy.Spider):
                 href = a_tag.get('href')
                 full_url = self.base_url+"/"+ href
                 self.driver.get(full_url)
-                page_source = BeautifulSoup(self.driver.page_source, "html.parser")
-                items_pics_flex_container = page_source.find("div", class_ = "image-grid-container common-clearfix")
-                image_grid_images= items_pics_flex_container.find_all('div', class_ ='image-grid-image')
-                url_pattern = re.compile(r'url\("([^"]+)"\)')
-                image_urls = []
-                product_id = page_source.find("span", class_ ="supplier-styleId").get_text()
+                try:
+                    page_source = BeautifulSoup(self.driver.page_source, "html.parser")
+                    items_pics_flex_container = page_source.find("div", class_="image-grid-container common-clearfix")
+                    if items_pics_flex_container:
+                        image_grid_images = items_pics_flex_container.find_all('div', class_='image-grid-image')
+                        url_pattern = re.compile(r'url\("([^"]+)"\)')
+                        image_urls = []
+                        product_id_element = page_source.find("span", class_="supplier-styleId")
+                        product_id = product_id_element.get_text() if product_id_element else None
 
-                seller = page_source.find('span', class_ = "supplier-productSellerName").get_text()
+                        seller_element = page_source.find('span', class_="supplier-productSellerName")
+                        seller = seller_element.get_text() if seller_element else None
 
+                        # Continue processing with image URLs, product ID, and seller
+                        
+                    else:
+                        # If the specific container is not found, handle the error accordingly
+                        print("Error: Image grid container not found on the page.")
+                except Exception as e:
+                    # Handle any other unexpected errors
+                    print(f"An error occurred: {e}")
+                # page_source = BeautifulSoup(self.driver.page_source, "html.parser")
+                # items_pics_flex_container = page_source.find("div", class_ = "image-grid-container common-clearfix")
+                # image_grid_images= items_pics_flex_container.find_all('div', class_ ='image-grid-image')
+                # url_pattern = re.compile(r'url\("([^"]+)"\)')
+                # image_urls = []
+                # product_id = page_source.find("span", class_ ="supplier-styleId").get_text()
+
+                # seller = page_source.find('span', class_ = "supplier-productSellerName").get_text()
 
                 for div in image_grid_images:
                     style = div.get('style')
-                    if style:
+                    if style: # Reset the counter for the next crawl
+
                         match = url_pattern.search(style)
                         if match:
                             image_urls.append(match.group(1))
 
                 print(image_grid_images)
-                product_title = page_source.find('h1', class_='pdp-title').get_text()
-                price = page_source.find('span', class_='pdp-price').get_text()
-                ratings = page_source.find('div', class_='index-overallRating').get_text()
-                ratings_count = page_source.find('div', class_='index-ratingsCount').get_text()
-                sizes_container = page_source.find_all('p', class_ = 'size-buttons-unified-size')
-                sizes = [size.get_text(strip=True) for size in sizes_container]
-                product_description = page_source.find('p', class_ = 'pdp-product-description-content').get_text()
-                pdp_size_fit = page_source.find('p', class_ = 'pdp-sizeFitDescContent pdp-product-description-content').get_text()
-                pd_material = page_source.find('p', 'pdp-sizeFitDescContent ', class_ = 'pdp-product-description-content').get_text()
-                print(pdp_size_fit, "pdp_size_fit",pd_material)
-                print(product_description, sizes, seller)
+                try:
+                    product_title = page_source.find('h1', class_='pdp-title').get_text()
+                except AttributeError:
+                    product_title = None
+
+
+                try: 
+                    pdp_name = page_source.find('h1', class_='pdp-name').get_text()
+                except AttributeError:
+                    pdp_name = None
+                    
+                try:
+                    price = page_source.find('span', class_='pdp-price').get_text()
+                except AttributeError:
+                    price = None
+
+                try:
+                    ratings = page_source.find('div', class_='index-overallRating').get_text()
+                except AttributeError:
+                    ratings = None
+
+                try:
+                    ratings_count = page_source.find('div', class_='index-ratingsCount').get_text()
+                except AttributeError:
+                    ratings_count = None
+
+                sizes = []
+                sizes_container = page_source.find_all('p', class_='size-buttons-unified-size')
+                for size in sizes_container:
+                    try:
+                        sizes.append(size.get_text(strip=True))
+                    except AttributeError:
+                        sizes = None
+
+                try:
+                    product_description = page_source.find('p', class_='pdp-product-description-content').get_text()
+                except AttributeError:
+                    pass
+
+                try:
+                    pdp_size_fit = page_source.find('p', class_='pdp-sizeFitDescContent pdp-product-description-content').get_text()
+                    # print(pdp_size_fit , "pdp_size_fit"*1000)
+                except AttributeError:
+                    pass
+
+                try:
+                    pd_material = page_source.find('p', class_='pdp-sizeFitDescContent pdp-product-description-content').get_text()
+                    # print(pd_material, 'pd_material'* 1000)
+                except AttributeError:
+                    pd_material = None
+
+                # print(product_title, price, ratings, ratings_count, product_description, sizes, pdp_size_fit, pd_material)
+
                 try:
                     button = WebDriverWait(self.driver, 20).until(
                         EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div/div[1]/main/div[2]/div[2]/div[3]/div/div[4]/div[2]"))
@@ -138,7 +264,6 @@ class MyntraNavbarSpider(scrapy.Spider):
                     key = div.find('div', class_='index-rowKey').text.strip()
                     value = div.find('div', class_='index-rowValue').text.strip()
                     key_value_pairs[key] = value
-
                 print(key_value_pairs)
 
                 try:
@@ -150,7 +275,6 @@ class MyntraNavbarSpider(scrapy.Spider):
                     print("Link not found within the specified time")
                 except Exception as e:
                     print("An error occurred:", e)
-                
                 time.sleep(2)
 
                 comments = BeautifulSoup(self.driver.page_source, "html.parser")
@@ -179,11 +303,16 @@ class MyntraNavbarSpider(scrapy.Spider):
                 _pd_base['seller_name'] = seller if seller else None
                 _pd_base['sizes'] = sizes if sizes else None
                 _pd_base['product_desc'] = product_description if product_description else None
-             
                 try:
                     _pd_base["product_title"] = product_title
                 except AttributeError:
                     _pd_base["product_title"] = None
+
+                try:
+                    _pd_base["pd_material"] = pd_material
+                except AttributeError:
+                    _pd_base["pd_material"] = None
+
                 try:
                     _pd_base["price"] = price
                 except AttributeError:
@@ -191,14 +320,19 @@ class MyntraNavbarSpider(scrapy.Spider):
                 try:
                     _pd_base['ratings']  =  ratings
                 except AttributeError:
-                    _pd_base["price"] = None
+                    _pd_base["ratings"] = None
                 try:
                     _pd_base['rating_count'] = ratings_count
                 except AttributeError:
                     _pd_base['rating_count'] = None
-                
+                try:
+                    _pd_base['pdp_name'] = pdp_name
+                except ArithmeticError:
+                    _pd_base['pdp_name'] = None
 
+                
                 self.data.append(dict(_pd_base))
+            self.json_dump(self.nav_bar_links[self.crawler_count])
 
 
     def json_dump(self, nav_link):
@@ -206,6 +340,8 @@ class MyntraNavbarSpider(scrapy.Spider):
         file_path = os.path.join(os.getcwd(), file_name)
         with open(file_path, "w") as json_file:
             json.dump(self.data, json_file, indent=2)
+            self.data = []
+
 
     def get_next_link(self, driver):
         try:
@@ -219,5 +355,5 @@ class MyntraNavbarSpider(scrapy.Spider):
             logging.warning(f"Error while getting next link: {e}")
             return None
 
-    def closed(self, reason):
-        self.json_dump(self.nav_bar_links[self.crawler_count - 1])  # Dump data when spider is closed
+    def closed(self, reason):# Dump data when spider is closed
+        self.json_dump(self.nav_bar_links[self.crawler_count - 1])  

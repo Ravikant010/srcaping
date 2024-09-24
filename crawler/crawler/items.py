@@ -21,6 +21,7 @@ class pd_base(scrapy.Item):
     pd_dscnt_price = scrapy.Field()
     product_title = scrapy.Field()
     price = scrapy.Field()
+    pdp_name = scrapy.Field()
     ratings = scrapy.Field()
     rating_count = scrapy.Field()
     pd_material = scrapy.Field()
